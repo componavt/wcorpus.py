@@ -30,18 +30,21 @@ import lib.average_vector
 #from synset_synonyms import word_syn
 #from synset_antonyms import word_syn
 #from synset_hyponyms import word_syn
-from synset_hypernyms import word_syn
+#from synset_hypernyms import word_syn
 
 import configus
 model = keyedvectors.KeyedVectors.load_word2vec_format(configus.MODEL_PATH, binary=True)
 
 
-script_dir = os.path.dirname(__file__) #<-- absolute dir the script is in
-read_path  = "/data/all/projects/git/wcorpus.addon/src.addon/sentences/sentences2_lemmas" 
-write_path = "/data/all/projects/git/wcorpus.addon/src.addon/sentences/sentences3_rusvectores_filtered"
+# script_dir = os.path.dirname(__file__) #<-- absolute dir the script is in
+#abs_dir_path       = "/data/all/projects/git/wcorpus.addon/src.addon/sentences/sentences2_lemmas" 
+#abs_dir_path_write = "/data/all/projects/git/wcorpus.addon/src.addon/sentences/sentences3_rusvectores_filtered"
 
-abs_dir_path       = os.path.join(script_dir, read_path )
-abs_dir_path_write = os.path.join(script_dir, write_path)
+abs_dir_path       = "/data/all/projects/git/wcorpus.addon/src.addon/sentences.short/sentences2_lemmas.short" 
+abs_dir_path_write = "/data/all/projects/git/wcorpus.addon/src.addon/sentences.short/sentences3_rusvectores_filtered.short"
+
+#abs_dir_path       = os.path.join(script_dir, read_path )
+#abs_dir_path_write = os.path.join(script_dir, write_path)
 onlyfiles = [f for f in listdir(abs_dir_path) if isfile(join(abs_dir_path, f))]
 
 i = 0
@@ -55,8 +58,15 @@ for filename in onlyfiles:
 
     output_lines = []
     lines = [line.rstrip('\n') for line in open(file_path)]
+    remark_line = ""
     for source_text in lines:
         source_text = source_text.decode('utf-8')
+        if len(source_text) > 0:
+            if "#" == source_text[:1]:          # REM, line starts from "#",
+                remark_line = source_text
+                output_lines.append( source_text )  
+                continue                        # get next line
+
         # print source_text
 
         result_words = []

@@ -30,8 +30,8 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=lo
 #read_path  = "sentences/sentences1_source"
 #write_path = "sentences/sentences2_lemmas"
 
-abs_dir_path       = "/data/all/projects/git/wcorpus.addon/src.addon/sentences/sentences2_lemmas" 
-abs_dir_path_write = "/data/all/projects/git/wcorpus.addon/src.addon/sentences/sentences3_rusvectores_filtered"
+abs_dir_path       = "/data/all/projects/git/wcorpus.addon/src.addon/sentences.short/sentences1.short" 
+abs_dir_path_write = "/data/all/projects/git/wcorpus.addon/src.addon/sentences.short/sentences2_lemmas.short"
 
 onlyfiles = [f for f in listdir(abs_dir_path) if isfile(join(abs_dir_path, f))]
 
@@ -84,6 +84,7 @@ for filename in onlyfiles:
                     result_text += u', '                # comma separated
                 result_text += u'|'.join( current_lemmas ) 
 
+        file_out.write( "# " + source_text.encode('utf-8') + "\n" )
         file_out.write( result_text.encode('utf-8') + "\n" )
         
         #print "Lemmas (set)  in sentence: " + u', '.join(lemmas)
