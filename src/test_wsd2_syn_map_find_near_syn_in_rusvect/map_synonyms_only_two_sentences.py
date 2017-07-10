@@ -21,6 +21,9 @@ import lib.average_vector
 import configus
 model = keyedvectors.KeyedVectors.load_word2vec_format(configus.MODEL_PATH, binary=True)
 
+from data.word_syn.synonyms_data import word_syn # small local synonyms
+#from data.word_syn.synset_synonyms import word_syn
+#from data.word_syn.synset_antonyms import word_syn
 
 # example with 2 pair of two near words (near in RusVectores)
 # similarity (медведь, зверь) = 
@@ -35,7 +38,7 @@ print "Text = " + source_text
 
 #synonym_text = u'запахнуть одежда дуновение проникать сквозь' # 0.887802541256 плотный
 #synonym_text = u'одеться одежда дуновение проникать сквозь' # 0.870945632458 плотный
-synonym_text = u'слон прыгать' # 0.870945632458 плотный
+synonym_text = u'плыть слон' # 0.870945632458 плотный
 #synonym_text = u'поплыть зверь' # 0.870945632458 плотный
 
 # split text to words[]
@@ -43,7 +46,7 @@ delim = ' \n\t,.!?:;';  # see http://stackoverflow.com/a/790600/1173350
 sentence_words = re.split("[" + delim + "]", source_text.lower())
 print "Words in sentence: " + u', '.join(sentence_words)
 
-#words = [u'застегнуть', u'пиджачок']
+#words = [u'плотный', u'плыть', u'медведь', u'слон', u'прыгать']
 #for w in words:
 #    print u'word {0} '.format(w)
 #    v_word = model[ w ]
@@ -65,11 +68,10 @@ for target_word in words:
 
     # calculate sentence average vector
     average_sentence = lib.average_vector.getAverageVectorForWords( sentence_minus_target, model, np )
-    # print "sentence average_vector: {}".format( average_sentence )
+    #print "sentence average_vector: {}".format( average_sentence )
 
     # replace one word in sentence by synonym (replace w_remove by w_add)
-    from synonyms_data import word_syn
-
+    # import word_syn
 
 #temp gvim
 
@@ -97,14 +99,15 @@ for target_word in words:
 
     # print "sentence_aver_vect_with_syn_wotarget - average_sentence: {}".format( sentence_aver_vect_with_syn_wotarget - average_sentence )
 
+    #arr_target_synonyms = model.similar_by_vector( model[ target_word ], topn=10, restrict_vocab=None)
     arr_target_synonyms = model.similar_by_vector(vect_target_syn, topn=10, restrict_vocab=None)
     #        print "Calculated target synonyms: " + u', '.join(arr_target_synonyms)
     for i in range(0, 9):
         print u'{0} {1}'.format(arr_target_synonyms[i][0], arr_target_synonyms[i][1])
 
 
-    cosine_similarity = np.dot(average_sentence, sentence_aver_vect_with_syn_wotarget)/(np.linalg.norm(average_sentence)* np.linalg.norm(sentence_aver_vect_with_syn_wotarget))
-    print u'cosine_similarity = {0}'.format(cosine_similarity)
+    # cosine_similarity = np.dot(average_sentence, sentence_aver_vect_with_syn_wotarget)/(np.linalg.norm(average_sentence)* np.linalg.norm(sentence_aver_vect_with_syn_wotarget))
+    #print u'cosine_similarity = {0}'.format(cosine_similarity)
 
     sys.exit("\nLet's stop and think.")
 

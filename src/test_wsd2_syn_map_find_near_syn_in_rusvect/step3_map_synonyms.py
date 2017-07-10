@@ -3,7 +3,7 @@
 
 # if duration > duration_limit_sec seconds, then calculations for the line of text is interrupted.
 
-duration_limit_sec = 4
+duration_limit_sec = 1
 
 import logging
 import sys
@@ -40,7 +40,8 @@ import time
 source_text = u'пасть|пал|палый, битва|батон, престол, племянник, оно, котор, могущество'
 #source_text = u'УЖЕ НЕСКОЛЬКО ЛЕТ ГОСТЕПРИИМНЫЙ ТЮРЬМА НА ОСТРОВ СЛУЖИТЬ ОН ЗИМНИЙ КВАРТИРА'
 
-read_path  = "/data/all/projects/git/wcorpus.addon/src.addon/sentences/sentences3_rusvectores_filtered"
+# read_path  = "/data/all/projects/git/wcorpus.addon/src.addon/sentences/sentences3_rusvectores_filtered"
+read_path  = "/data/all/projects/git/wcorpus.addon/src.addon/sentences.short/sentences3_rusvectores_filtered.short"
 
 onlyfiles = [f for f in listdir(read_path) if isfile(join(read_path, f))]
 
@@ -49,12 +50,19 @@ for filename in onlyfiles:
     # filename = '10102.txt'
     i += 1
     file_path       = os.path.join(read_path, filename)
-    print u"{0}. {1}".format(i, file_path);
+    print u"\n{0}. {1}".format(i, file_path);
 
     lines = [line.rstrip('\n') for line in open(file_path)]
+    remark_line = ""
     for source_text in lines:
         source_text = source_text.decode('utf-8')
-        # print "Text = " + source_text
+        # print "source_text = " + source_text
+
+        if len(source_text) > 0:
+            if "#" == source_text[:1]:          # REM, line starts from "#",
+                remark_line = source_text
+                continue                        # get next line
+
         sys.stdout.write('+') # every new line of text is a "+"
         sys.stdout.flush()
 
@@ -174,6 +182,7 @@ for filename in onlyfiles:
                 vect_target_syn = model[ target_word ] - average_sentence + average_sentence_with_syn_wotarget
                 # print "vect_target_syn: {}".format( vect_target_syn )
 
+                #todo  Improving performance for function most_similar #527 https://github.com/RaRe-Technologies/gensim/issues/527
                 arr_target_synonyms = model.similar_by_vector(vect_target_syn, topn=1, restrict_vocab=None)
 
                 # print results
@@ -183,8 +192,12 @@ for filename in onlyfiles:
                 # print u"target word={0}, target synonym '{1}'".format(target_word, target_synonym) 
                 if target_synonym != target_word:
                     print "target word: " + target_word
-                    print "Synonyms of words in sentence: " + u', '.join(synonyms)
+
+                    print "Source text: " + remark_line
+                    remark_line = ""
+
                     print "Words in sentence without target word: " + u', '.join(sentence_minus_target)
+                    print "Synonyms of words in sentence: " + u', '.join(synonyms)
                     print u"{0} {1}  target word:'{2}', synonym found:'{3}', similarity={4}".format(i, ', '.join(words_with_syn), target_word, target_synonym, arr_target_synonyms[0][1]) 
                 # print u'{0} {1}'.format(arr_target_synonyms[0][0], arr_target_synonyms[0][1])
 
