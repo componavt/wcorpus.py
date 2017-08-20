@@ -1,9 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# python -m cProfile -o _profile_out step3_map_synonyms.py
+# sudo pip install snakeviz
+# snakeviz _profile_out or runsnake _profile_out
+
 # if duration > duration_limit_sec seconds, then calculations for the line of text is interrupted.
 
-duration_limit_sec = 1
+duration_limit_sec = 32 # 1 12 32
+
+# number of words similar (nearest in RusVectores, model.most_similar)
+# for each word in sentence and their synonyms
+topn_around_words = 3 # 100 10
 
 import logging
 import sys
@@ -21,13 +29,14 @@ import itertools
 
 sys.path.append(os.path.abspath('../')) # add parent folder, access to 'lib'
 import lib.filter_vocab_words
+import lib.find_similar_words
 import lib.string_util
 #import lib.synset
 import lib.average_vector
 
 #from data.word_syn.synonyms_data import word_syn # small local synonyms
-#from data.word_syn.synset_synonyms import word_syn
-from data.word_syn.synset_antonyms import word_syn
+from data.word_syn.synset_synonyms import word_syn
+#from data.word_syn.synset_antonyms import word_syn
 #from data.word_syn.synset_hyponyms import word_syn
 #from data.word_syn.synset_hypernyms import word_syn
 
@@ -35,6 +44,9 @@ import configus
 model = keyedvectors.KeyedVectors.load_word2vec_format(configus.MODEL_PATH, binary=True)
 
 import time
+
+import codecs
+sys.stdout=codecs.getwriter('utf-8')(sys.stdout)    # see https://stackoverflow.com/a/5530880/1173350
 
 #source_text = u'ОН ПЛОТНЫЙ ЗАСТЕГНУТЬ СВОЙ ЛЁГКИЙ ПИДЖАЧОК ВЕТЕР ПРОНИЗЫВАТЬ ЕГО НАСКВОЗЬ'
 source_text = u'пасть|пал|палый, битва|батон, престол, племянник, оно, котор, могущество'
@@ -56,14 +68,16 @@ for filename in onlyfiles:
     remark_line = ""
     for source_text in lines:
         source_text = source_text.decode('utf-8')
-        # print "source_text = " + source_text
+        ## print "source_text = " + source_text
+
+        around_words = set() # all words in the line of text and all words near them (in RusVectores)
 
         if len(source_text) > 0:
             if "#" == source_text[:1]:          # REM, line starts from "#",
                 remark_line = source_text
                 continue                        # get next line
 
-        sys.stdout.write('+') # every new line of text is a "+"
+        sys.stdout.write('+') # every new line of text is a "+" plus
         sys.stdout.flush()
 
         # split text to words[]
@@ -80,6 +94,7 @@ for filename in onlyfiles:
                 piped_words = re.split("[|]", w)
                 # sw.extend (piped_words)
                 sw.append (piped_words [0] )                   # remain only first lemmatizer's word now
+                # todo lib.get_best_lemma_by_context(prev_word, next_word, lemmas == piped_words)
                 #print "Piped words: " + u', '.join( piped_words )
                 #print "Piped words [0]: " + piped_words[0]
             else:
@@ -89,7 +104,43 @@ for filename in onlyfiles:
 
         # let's filter out words without vectors, that is remain only words, which are presented in RusVectores dictionary
         words = lib.filter_vocab_words.filterVocabWords( sentence_words, model.vocab )
-        #print "Words in RusVectores: " + u', '.join(words)
+        # print "Words in RusVectores: " + u', '.join(words)
+
+
+        # todo
+        # let's gather all words + synonyms, then find all similar words in Word2Vec RusVectores, in order to speed up search instead of heavy 
+        # arr_target_synonyms = model.similar_by_vector(vect_target_syn, topn=1, restrict_vocab=None)
+        around_words.update(words)
+        
+        add_words = lib.find_similar_words.findSimilarWords( words, model.vocab, topn_around_words )
+
+         
+        for w in words:
+            add_words_similarity = model.most_similar( w, [ ], topn_around_words)
+            add_words = set()
+            for aws in add_words_similarity:
+                add_words.add( aws[0] )
+
+            ## print u"most_similar ({0}) = {1}".format( w, u', '.join(add_words) )
+            around_words.update( add_words )
+
+            if w in word_syn:
+                ## if len( word_syn[w] ) > 0:
+                    ## print u"synonyms ({0}) = {1}".format( w, u', '.join( word_syn[w] ))
+                for syn in word_syn[w] :
+                    if syn in model.vocab:
+                        around_words.add( syn )
+                        add_syn_similarity = model.most_similar( syn, [ ], topn_around_words)
+                        add_syn = set()
+                        for aws in add_syn_similarity:
+                            add_syn.add( aws[0] )
+
+                        ## print u"most_similar of synonym ({0}) = {1}".format( syn, u', '.join(add_syn) )
+
+                        around_words.update( add_syn )
+        ## print "Number of words from the sentence in RusVectores: {0}, len(around_words)={1}".format( len(words), len(around_words) )
+        ## print " ================ around_words are " + u', '.join(around_words) 
+        # sys.exit("\nLet's stop and think.")
 
 
         # replace several words in sentence by synonyms from word_syn (replace w_remove by w_add), try all combinations of synonyms
@@ -99,7 +150,7 @@ for filename in onlyfiles:
         for target_word in words:
             sentences_list = list()
 
-            # print "target word: " + target_word
+            ## print "target word: " + target_word
 
             # sentence without target word
             sentence_minus_target = words[:]
@@ -113,29 +164,32 @@ for filename in onlyfiles:
             # get list of synonyms of words from sentence, invert subset of map word_syn
             synonyms_to_word = dict()
             for w in sentence_minus_target:
-                # print u'Next word w: {}'.format( w )
+
+                ## if w not in word_syn:
+                    ## print u"    word_syn[{0}] = NULL".format( w )
                 if w in word_syn:
-                    # print u"    word_syn[w] = {}".format( word_syn[w] )
+                    ## print u"    word_syn[{0}] = {1}".format( w, u', '.join(word_syn[w]) )
+
                     for syn in word_syn[w] :
-                        # print u'        syn: {}'.format( syn )
                         if syn in model.vocab:
                             synonyms_to_word[ syn ] = w
 
-            # print "Synonyms of words in sentence: " #+ u', '.join(synonyms_to_word)
-            #for syn, w in synonyms_to_word.items():
-            #    print u"    synonym <- word   '{}' <- '{}'".format( syn, w)
+            ## print "Synonyms of words in sentence: " #+ u', '.join(synonyms_to_word)
+            ## for syn, w in synonyms_to_word.items():
+               ## print u"    synonym <- word   '{}' <- '{}'".format( syn, w)
 
             # all combinations of synonyms of words in sentence without the target word, 
             # every combination of synonyms will replace words in sentence
             i = 0
             synonyms = list(synonyms_to_word.keys())
-            #print "Synonyms of words in sentence: " + u', '.join(synonyms)
+            ## print "Synonyms of words in sentence: " + u', '.join(synonyms)
 
-            for L in range(0, len(synonyms)+1):
+            for L in range(1, len(synonyms)+1):
 
                 for subset in itertools.combinations(synonyms, L):
-                    # print u'{0} {1}'.format(i, ', '.join(subset))
+                    # print u'{0}. len(replace subset) = {1}, subset = {2}'.format(i, len(subset), ', '.join(subset))
 
+                    # sys.exit("\nLet's stop and think.")
                     sentence = sentence_minus_target[:] # copy words from sentence_minus_target
                 
                     # replace subset in sentence_minus_target by synonyms from our dictionary (word_syn)
@@ -151,7 +205,7 @@ for filename in onlyfiles:
 
                     ss = set(sentence)
                     for phrase in sentences_list:
-                        if phrase == ss:
+                        if phrase == ss:        # compare set of words in one of sentences from sentences_list and new ss
                             new_sentence = False
                             break
                     if new_sentence:
@@ -164,14 +218,15 @@ for filename in onlyfiles:
                     #print "Break, break, break, break, break, break ....."
                     break
 
-            if duration > 20:
-                sys.stdout.write('-'), # every interruption of calculation is "-"
+            if duration > duration_limit_sec:
+                sys.stdout.write('-'), # every interruption of calculation is marked by "-" minus
                 sys.stdout.flush()
                 #print "2222222222222222222 break, break, break, break, break ....."
                 break
                 #print("--- %s seconds ---" % (duration))
 
             generated_sentences_counter += len(sentences_list)
+            ## print u'len(sentences_list)={0} (number of sentences generated, to check)'.format(len(sentences_list))
 
             i = 0
             for words_with_syn in sentences_list:
@@ -182,14 +237,30 @@ for filename in onlyfiles:
                 vect_target_syn = model[ target_word ] - average_sentence + average_sentence_with_syn_wotarget
                 # print "vect_target_syn: {}".format( vect_target_syn )
 
-                #todo  Improving performance for function most_similar #527 https://github.com/RaRe-Technologies/gensim/issues/527
-                arr_target_synonyms = model.similar_by_vector(vect_target_syn, topn=1, restrict_vocab=None)
+                #todo  Improving performance for function most_similar #527 https://github.com/RaRe-Technologies/gensim/issues/52
+                # calculate similarity between two vectors (w, vect_target_syn) for each w in around_words
+               
+                max_cos = -1
+                norm_vect_target_syn = np.linalg.norm(vect_target_syn)
+                for aw in around_words:
+                    #if aw == target_word:
+                    #    continue
+                    maw = model[aw]
+                    cosine_similarity = np.dot(maw, vect_target_syn)/(np.linalg.norm(maw)* norm_vect_target_syn)
+                    if cosine_similarity > max_cos:
+                        max_cos = cosine_similarity
+                        target_synonym = aw
+                        # print u"new max_cos: {0}. cosine_similarity={1}, target word:'{2}', target_synonym = around word = '{3}'".format(i, cosine_similarity, target_word, target_synonym) 
 
+                ## print u"variant 1. max_cos {0}. cosine_similarity={1}, target word:'{2}', target_synonym = '{3}'".format(i, max_cos, target_word, target_synonym) 
+                
+                ### arr_target_synonyms = model.similar_by_vector(vect_target_syn, topn=1, restrict_vocab=None)
                 # print results
                 # print "Calculated target synonyms: " + u', '.join(arr_target_synonyms)
                 i += 1
-                target_synonym = arr_target_synonyms[0][0]
-                # print u"target word={0}, target synonym '{1}'".format(target_word, target_synonym) 
+                ###target_synonym = arr_target_synonyms[0][0]
+                ###print u"variant 2. similar_by_vector: similarity={0}, target word:'{1}', target_synonym = '{2}'".format(arr_target_synonyms[0][1], target_word, target_synonym) 
+                
                 if target_synonym != target_word:
                     print "target word: " + target_word
 
