@@ -113,7 +113,7 @@ for filename in onlyfiles:
         around_words.update(words)
         
         add_words = lib.find_similar_words.findSimilarWords( words, model.vocab, topn_around_words )
-
+        # tru la la
          
         for w in words:
             add_words_similarity = model.most_similar( w, [ ], topn_around_words)
