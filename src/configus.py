@@ -3,11 +3,11 @@
 
 # Configurations parameters
 
-#MODEL_NAME = "ruscorpora_2015.model.bin"
+MODEL_NAME = "ruscorpora_2015.model.bin"
 #MODEL_NAME = "ruscorpora_2017_1_600_2.bin"
 
 #MODEL_NAME = "news_2015.model.bin"
-MODEL_NAME = "news_2017_0_300_2.bin"
+#MODEL_NAME = "news_2017_0_300_2.bin"
 
 # failed, unknown words! MODEL_NAME = "ruwikiruscorpora.model.bin"
 
