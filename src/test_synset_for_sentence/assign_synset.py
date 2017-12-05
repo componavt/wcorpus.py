@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/b:in/env python
 # -*- coding: utf-8 -*-
 
 # Find synset (from several variants) for the sentence.
@@ -10,6 +10,8 @@ import os
 import codecs
 import operator
 import collections
+
+
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
@@ -32,31 +34,65 @@ import configus
 model = keyedvectors.KeyedVectors.load_word2vec_format(configus.MODEL_PATH, binary=True)
 
 def diff(list1, list2):
-	list2 = set(list2)
-	return [item for item in list1 if item not in list2]
+    list2 = set(list2)
+    return [item for item in list1 if item not in list2]
 
 print "Word2vec model: {}\n".format(configus.MODEL_NAME)
 
 print "Deleted synsets"
 
+print "__________________SYNSETS________________"
 for lemma in synsets:
-	for synset_id in synsets[lemma]:
-		filtered_list = lib.filter_vocab_words.filterVocabWords( synsets[lemma][synset_id], model.vocab )
-		print '\n', lemma
-		print 'Deleted:', ', '.join(diff(synsets[lemma][synset_id],filtered_list))
-		print 'New synset:', ', '.join(filtered_list)
-		synsets[lemma][synset_id] = filtered_list
+    for synset_id in synsets[lemma]:
+        filtered_list = lib.filter_vocab_words.filterVocabWords( synsets[lemma][synset_id], model.vocab )
+        if len(filtered_list) < 2:
+            print u"\n{}".format( lemma )
+        # print u'\n', lemma
+            print 'OLD LIST:', ', '.join(synsets[lemma][synset_id])
+            print 'DELETED:', ', '.join(diff(synsets[lemma][synset_id],filtered_list))
+            print 'NEW SYNSET:', ', '.join(filtered_list)
+        synsets[lemma][synset_id] = filtered_list
 
-
+#print "__________________SENTENCES________________"
 for sent in sentences:
-#    print u"Sentence: {} has lemmas: ".format( sent ) 
-#    print "Sentence: " + sent + " has lemmas: "
-    print "\n\nSentence:", sent, "has lemmas:"
-#    print sentences[sent]['lemmas']
-    for lemma in sentences[sent]["lemmas"]:
-#        print u"{}".format( lemma ),
-		print lemma,
+#    print "\n\nSentence:", sent, "has lemmas:"
+    filtered_list = lib.filter_vocab_words.filterVocabWords( sentences[sent]["lemmas"], model.vocab )
+#    print 'OLD LIST:', ', '.join(sentences[sent]['lemmas'])
+#    print 'DELETED:', ', '.join(diff(sentences[sent]['lemmas'],filtered_list))
+#    print 'NEW LIST:', ', '.join(filtered_list)
+    sentences[sent]['lemmas'] = filtered_list
 
+print "__________________EXPERIMENT________________"
+for sent in sentences:
+    print "\n\nSENTENCE:", sent
+    lemma = sentences[sent]['lemma']
+    if len(sentences[sent]['lemmas'])> 0 :
+        max_d = 0
+        max_i = 0
+        print "LEMMA LIST:", ', '.join(sentences[sent]['lemmas'])
+        print "EXPERT ANSWER:", ', '.join(synsets[lemma][sentences[sent]['synset_exp']])
+        for synset_id in synsets[lemma]:
+            if len(synsets[lemma][synset_id]) > 0 :
+                d = abs(model.n_similarity(sentences[sent]['lemmas'], synsets[lemma][synset_id]))
+                print d, ':', ', '.join(synsets[lemma][synset_id])
+                if d > max_d:
+                    max_d = d
+                    max_i = synset_id
+            else :
+                print synset_id, 'synset is empty'
+
+        if (max_i == 0):
+            sentences[sent]['synset_alg1'] = '-'
+            print '-'
+        else:
+            sentences[sent]['synset_alg1'] = max_i
+            if sentences[sent]['synset_exp'] == max_i:
+                print 1
+            else: 
+                print 0
+
+    else:
+        print 'Lemma list empty'
 
 sys.exit("\nLet's stop and think.")
 
