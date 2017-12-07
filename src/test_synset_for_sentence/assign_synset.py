@@ -5,13 +5,15 @@
 # For each sentence in the input file sentences.py
 
 import logging
-import sys
 import os
 import codecs
 import operator
 import collections
 
-
+# encoding=utf8
+import sys
+reload(sys)
+sys.setdefaultencoding('utf8')
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
@@ -63,6 +65,8 @@ for sent in sentences:
     sentences[sent]['lemmas'] = filtered_list
 
 print "__________________EXPERIMENT________________"
+sum_1 = 0
+sum_0 = 0
 for sent in sentences:
     print "\n\nSENTENCE:", sent
     lemma = sentences[sent]['lemma']
@@ -83,16 +87,30 @@ for sent in sentences:
 
         if (max_i == 0):
             sentences[sent]['synset_alg1'] = '-'
-            print '-'
+            sentences[sent]['alg1_right'] = '-'
         else:
             sentences[sent]['synset_alg1'] = max_i
             if sentences[sent]['synset_exp'] == max_i:
-                print 1
+                sentences[sent]['alg1_right'] = 1
+                sum_1 += 1
             else: 
-                print 0
-
+                sentences[sent]['alg1_right'] = 0
+                sum_0 += 1
+        print sentences[sent]['alg1_right'];
     else:
         print 'Lemma list empty'
+
+print "Right answers:", str(sum_1)+',', "wrong answers:", str(sum_0)
+
+sentFile = open('data/sentence_out.csv','w')
+for sent in sentences:
+#    sentFile.write(sent + "\t" + str(sentences[sent]['synset_exp']) + "\t" + str(sentences[sent]['synset_alg1']) + "\t" + str(sentences[sent]['synset_alg2']) + "\n")
+    sentFile.write(u"{}\t{}\t{}\t{}\t{}\t{}\n".format(sent,str(sentences[sent]['synset_exp']),
+                                                           str(sentences[sent]['synset_alg1']),
+                                                           str(sentences[sent]['synset_alg2']),
+                                                           str(sentences[sent]['alg1_right']),
+                                                           str(sentences[sent]['alg2_right'])))
+sentFile.close()
 
 sys.exit("\nLet's stop and think.")
 
