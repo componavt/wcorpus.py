@@ -4,11 +4,13 @@
 # Find synset (from several variants) for the sentence.
 # For each sentence in the input file sentences.py
 
+from __future__ import division # https://stackoverflow.com/a/21317109/1173350
 import logging
 import os
 import codecs
 import operator
 import collections
+import numpy as np
 
 # encoding=utf8
 import sys
@@ -31,6 +33,7 @@ import lib.string_util
 import lib.synset
 
 import lib.internal_set
+import test_synset_for_sentence.lib_sfors.synset_selector
 
 import configus
 model = keyedvectors.KeyedVectors.load_word2vec_format(configus.MODEL_PATH, binary=True)
@@ -41,19 +44,8 @@ def diff(list1, list2):
 
 print "Word2vec model: {}\n".format(configus.MODEL_NAME)
 
-print "Deleted synsets"
-
 print "__________________SYNSETS________________"
-for lemma in synsets:
-    for synset_id in synsets[lemma]:
-        filtered_list = lib.filter_vocab_words.filterVocabWords( synsets[lemma][synset_id], model.vocab )
-        if len(filtered_list) < 2:
-            print u"\n{}".format( lemma )
-        # print u'\n', lemma
-            print 'OLD LIST:', ', '.join(synsets[lemma][synset_id])
-            print 'DELETED:', ', '.join(diff(synsets[lemma][synset_id],filtered_list))
-            print 'NEW SYNSET:', ', '.join(filtered_list)
-        synsets[lemma][synset_id] = filtered_list
+lib.filter_vocab_words.filterSynsets( synsets, model.vocab ) # filter synsets, remove words absented in RusVectores
 
 #print "__________________SENTENCES________________"
 for sent in sentences:
@@ -64,52 +56,53 @@ for sent in sentences:
 #    print 'NEW LIST:', ', '.join(filtered_list)
     sentences[sent]['lemmas'] = filtered_list
 
-print "__________________EXPERIMENT________________"
-sum_1 = 0
-sum_0 = 0
+print "__________________EXPERIMENT 1________________"
+alg1_sum_1 = 0 # number of positive answers (the same as answer of expert)
+alg1_sum_0 = 0 # number of negative answers
 for sent in sentences:
-    print "\n\nSENTENCE:", sent
-    lemma = sentences[sent]['lemma']
-    if len(sentences[sent]['lemmas'])> 0 :
-        max_d = 0
-        max_i = 0
-        print "LEMMA LIST:", ', '.join(sentences[sent]['lemmas'])
-        print "EXPERT ANSWER:", ', '.join(synsets[lemma][sentences[sent]['synset_exp']])
-        for synset_id in synsets[lemma]:
-            if len(synsets[lemma][synset_id]) > 0 :
-                d = abs(model.n_similarity(sentences[sent]['lemmas'], synsets[lemma][synset_id]))
-                print d, ':', ', '.join(synsets[lemma][synset_id])
-                if d > max_d:
-                    max_d = d
-                    max_i = synset_id
-            else :
-                print synset_id, 'synset is empty'
+    # the list 'sentences' will be updated in the function below
+    (a, b) = test_synset_for_sentence.lib_sfors.synset_selector.selectSynsetForSentenceByAverageSimilarity (
+                                                                sent, sentences, synsets, model )
+    alg1_sum_1 += a
+    alg1_sum_0 += b
+print "Right answers:", str(alg1_sum_1)+',', "wrong answers:", str(alg1_sum_0)
 
-        if (max_i == 0):
-            sentences[sent]['synset_alg1'] = '-'
-            sentences[sent]['alg1_right'] = '-'
-        else:
-            sentences[sent]['synset_alg1'] = max_i
-            if sentences[sent]['synset_exp'] == max_i:
-                sentences[sent]['alg1_right'] = 1
-                sum_1 += 1
-            else: 
-                sentences[sent]['alg1_right'] = 0
-                sum_0 += 1
-        print sentences[sent]['alg1_right'];
-    else:
-        print 'Lemma list empty'
 
-print "Right answers:", str(sum_1)+',', "wrong answers:", str(sum_0)
+epsFile = open('data/epsilon_out.csv','w')
+epsFile.write(u"Epsilon\tRight\tWrong\n")
+
+print "__________________EXPERIMENT 2________________"
+# eps, near_set_num, far_set_num, alien_degree
+#for eps in range(0.05,0.95,0.05):
+for eps in np.arange(0.0, 1.0, 0.01):
+    alg2_expert_plus  = 0
+    alg2_expert_minus = 0
+    for sent in sentences:
+        # the list 'sentences' will be updated in the function below
+        (a, b) = test_synset_for_sentence.lib_sfors.synset_selector.selectSynsetForSentenceByAlienDegree (
+                                                                        sent, sentences, synsets, model, eps )
+        alg2_expert_plus  += a
+        alg2_expert_minus += b
+    
+    print "Epsilon:", str(eps)+',', "right answers:", str(alg2_expert_plus)+',', "wrong answers:", str(alg2_expert_minus)
+
+    epsFile.write(u"{}\t{}\t{}\n".format(str(eps), str(alg2_expert_plus), str(alg2_expert_minus)))
+epsFile.close()
+sys.exit("\nLet's stop and think.")
 
 sentFile = open('data/sentence_out.csv','w')
+sentFile.write(u"Sentence\tLemma\tN lemmas\tExpert\tAlg1(average)\tAlg2(alien)\tAlg1+\tAlg2+\n")
+
 for sent in sentences:
 #    sentFile.write(sent + "\t" + str(sentences[sent]['synset_exp']) + "\t" + str(sentences[sent]['synset_alg1']) + "\t" + str(sentences[sent]['synset_alg2']) + "\n")
-    sentFile.write(u"{}\t{}\t{}\t{}\t{}\t{}\n".format(sent,str(sentences[sent]['synset_exp']),
-                                                           str(sentences[sent]['synset_alg1']),
-                                                           str(sentences[sent]['synset_alg2']),
-                                                           str(sentences[sent]['alg1_right']),
-                                                           str(sentences[sent]['alg2_right'])))
+    sentFile.write(u"{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n"
+            .format(sent,sentences[sent]['lemma'],
+                         str(len(sentences[sent]['lemmas'])),
+                         str(sentences[sent]['synset_exp']),
+                         str(sentences[sent]['synset_alg1']),
+                         str(sentences[sent]['synset_alg2']),
+                         str(sentences[sent]['alg1_right']),
+                         str(sentences[sent]['alg2_right'])))
 sentFile.close()
 
 sys.exit("\nLet's stop and think.")
