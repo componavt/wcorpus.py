@@ -44,6 +44,7 @@ def diff(list1, list2):
 
 print "Word2vec model: {}\n".format(configus.MODEL_NAME)
 
+eps_step = 0.01
 print "__________________SYNSETS________________"
 lib.filter_vocab_words.filterSynsets( synsets, model.vocab ) # filter synsets, remove words absented in RusVectores
 
@@ -75,12 +76,12 @@ epsFile.write(u"Epsilon\tCount\n")
 lemmas = {}
 for lemma in synsets:
     lemmas[lemma] = {}
-    for eps in np.arange(0.0, 1.0, 0.01):
+    for eps in np.arange(0.0, 1.0, eps_step):
         lemmas[lemma][eps] = {'expert_plus': 0, 'expert_minus' : 0}
 
 # eps, near_set_num, far_set_num, alien_degree   # for eps in range(0.05,0.95,0.05):
 #epsilons = [];
-for eps in np.arange(0.0, 1.0, 0.01):
+for eps in np.arange(0.0, 1.0, eps_step):
     #epsilons[eps] = {'alg2_expert_plus': 0, 'alg2_expert_minus' : 0}
     alg2_expert_plus  = 0
     alg2_expert_minus = 0
@@ -101,11 +102,19 @@ for eps in np.arange(0.0, 1.0, 0.01):
 epsFile.close()
 
 lemmaFile = open('data/9lemma_hist.csv','w')
-for lemma in lemmas:
-    lemmaFile.write(lemma+"\n")
-    lemmaFile.write("\tEpsilon\tRight\tWrong\n")
-    for eps in np.arange(0.0, 1.0, 0.01):
-        lemmaFile.write(u"\t{}\t{}\t{}\n".format(str(eps), str(lemmas[lemma][eps]['expert_plus']), str(lemmas[lemma][eps]['expert_minus'])))
+lemmaFile.write("Epsilon")
+sorted_lemmas = lemmas.keys()
+sorted_lemmas.sort()
+# header: lemma itself
+for lemma in sorted_lemmas:
+    lemmaFile.write("\t"+lemma)
+lemmaFile.write("\n")
+# print to file values for all lemmas in one line
+for eps in np.arange(0.0, 1.0, eps_step):
+    lemmaFile.write(str(eps))
+    for lemma in sorted_lemmas:
+        lemmaFile.write(u"\t{}".format(str(lemmas[lemma][eps]['expert_plus'])))
+    lemmaFile.write("\n")
 lemmaFile.close()
 
 #sys.exit("\nLet's stop and think.")

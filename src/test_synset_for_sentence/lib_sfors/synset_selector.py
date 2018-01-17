@@ -106,7 +106,7 @@ def selectSynsetForSentenceByAlienDegree( sent, sentences, synsets, model, eps):
 
         for sent_lemma in sentences[sent]['lemmas']:
             for syns_lemma in synsets[lemma][synset_id]:
-                d = abs(model.n_similarity([sent_lemma], [syns_lemma]))
+                d = model.n_similarity([sent_lemma], [syns_lemma])
                 if d > eps:
                     near_set.add(sent_lemma)
                     near_set.add(syns_lemma)
@@ -125,7 +125,7 @@ def selectSynsetForSentenceByAlienDegree( sent, sentences, synsets, model, eps):
 #        print "far_set:", ', '.join(far_set)
 #        print "alien_degree:", str(alien_degree)
             
-    if (alien_degree_min == 100):
+    if (alien_degree_min == 1000):
         sentences[sent]['synset_alg2'] = '-'
         sentences[sent]['alg2_right'] = '-'
     else:
@@ -134,7 +134,8 @@ def selectSynsetForSentenceByAlienDegree( sent, sentences, synsets, model, eps):
             sentences[sent]['alg2_right'] = 1
             positive_answer = 1
         else: 
-            sentences[sent]['alg2_right'] = 0
+            if sentences[sent]['alg2_right'] == '':
+                sentences[sent]['alg2_right'] = 0
             negative_answer = 1
 #    print sentences[sent]['alg2_right']
 
