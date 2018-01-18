@@ -140,3 +140,56 @@ def selectSynsetForSentenceByAlienDegree( sent, sentences, synsets, model, eps):
 #    print sentences[sent]['alg2_right']
 
     return positive_answer, negative_answer
+
+# (Algorithm 3, modified 1) Select synset for the sentence using average similarity (model.n_similarity)
+def selectSynsetForSentenceByAverageSimilarityModified( sent, sentences, lemma_synset, model, eps ):
+    """
+    Select synset for the sentence calculating ratio of different words 
+    to the number of similar words in a sentence and synset.
+        (1) sent is current sentence
+        (2) for each synset
+        (3)     calculate number of similar( lemmas of sentence, synonyms of synset) > eps
+        (4) select the synset with the minimum alien degree.
+    
+    Parameters
+    ----------
+    sent : current sentence index in the multi-array sentences[][]
+    model : object (Word2Vec model).
+        
+    Returns
+    -------
+    updates the argument sentences (list of objects)
+    """
+    positive_answer = 0 # 1 if an answer of expert is the same
+    negative_answer = 0 # 1 in other case
+
+    if 0 == len(sentences[sent]['lemmas']) :
+        return positive_answer, negative_answer
+
+    max_sim = 0
+    best_synset = ''
+    for synset_id in lemma_synset:
+        S_k = set()     # some words of sentence
+        Cand_k = set()  # some synonyms of synset
+        for sent_lemma in sentences[sent]['lemmas']:    # all words from sentence
+            for syns_lemma in lemma_synset[synset_id]:  # all synonyms from synset
+                d = model.n_similarity([sent_lemma], [syns_lemma])
+                if d > eps:
+                    S_k.add(sent_lemma)
+                    Cand_k.add(syns_lemma)
+        if len(S_k) > 0 and len(Cand_k) > 0:
+            sim_k = model.n_similarity(list(S_k), list(Cand_k))
+            if sim_k > max_sim:
+                max_sim = sim_k
+                best_synset = synset_id
+    sentences[sent]['synset_alg3'] = best_synset
+    if sentences[sent]['synset_exp'] == sentences[sent]['synset_alg3']:
+        sentences[sent]['alg3_right'] = 1
+        positive_answer = 1
+    else:
+        if sentences[sent]['alg3_right'] == '':
+            sentences[sent]['alg3_right'] = 0
+        negative_answer = 1
+
+    return positive_answer, negative_answer
+
