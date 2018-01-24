@@ -27,14 +27,17 @@ print source_text
 
 # split text to words[]
 delim = ' \n\t,.!?:;';  # see http://stackoverflow.com/a/790600/1173350
-words = re.split("[" + delim + "]", source_text.lower())
+words = re.split("[" + delim + "]", source_text) # .lower()
 print "Source words: "
 print (u', '.join(words))
 
-#words = [u'сосредоточиваться', u'asdf']
-#print (word)
-#v_word = model[ word ]
+word = u"Яблоко"
+print (word)
+v_word = model [ word.lower()]  # +"_NOUN"
+#print u"word2vec('{}')={}".format( word, v_word )
+#sys.exit("\nLet's stop and think.")
 
-words_in_dict = lib.filter_vocab_words.filterVocabWords( words, model.vocab )
+#words = [u"Яблоко"]
+words_in_dict = lib.filter_vocab_words.filterVocabWords( words, model) #.wv.vocab )
 print "\nWords in RusVectores dict: "
 print (', '.join(words_in_dict))

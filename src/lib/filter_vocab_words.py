@@ -7,14 +7,16 @@ def filterVocabWords( word_list, vocab ):
     # result filtered list
     result = []
     
+    #print u"First word in the vocabulary: '{}'".format(vocab[0])
+
     for w in word_list:
-        if w in vocab:
+        if w.lower() in vocab:
             result.append(w)
             
         #if w.decode('utf8') not in vocab:
-        #if w not in vocab:
+        #if w.lower() not in vocab:
         #    word_list.remove( w )
-        #    print u"My KeyError: '{}' does not indexed by word2vec model.".format( w )
+            #print u"My KeyError: '{}' does not indexed by word2vec model.".format( w )
         #else:
         #    print u"OK. '{}' indexed by word2vec model.".format( w )
     
