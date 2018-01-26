@@ -5,7 +5,6 @@ from __future__ import division # https://stackoverflow.com/a/21317109/1173350
 
 # (Algorithm 1) Select synset for the sentence using average similarity (model.n_similarity)
 def selectSynsetForSentenceByAverageSimilarity( sent, sentences, synsets, model ):
-    # Right answers: 495, wrong answers: 786
     """
     Select synset for the sentence using average similarity.
         (1) sent is current sentence
@@ -142,14 +141,13 @@ def selectSynsetForSentenceByAlienDegree( sent, sentences, synsets, model, eps):
     return positive_answer, negative_answer
 
 # (Algorithm 3, modified 1) Select synset for the sentence using average similarity (model.n_similarity)
-def selectSynsetForSentenceByAverageSimilarityModified( sent, sentences, lemma_synset, model, eps ):
+def selectSynsetForSentenceByAverageSimilarityModified( sent, sentences, lemma_synsets, model, eps ):
     """
-    Select synset for the sentence calculating ratio of different words 
-    to the number of similar words in a sentence and synset.
+    Select synset for the sentence using average similarity.
         (1) sent is current sentence
-        (2) for each synset
-        (3)     calculate number of similar( lemmas of sentence, synonyms of synset) > eps
-        (4) select the synset with the minimum alien degree.
+        (2) filter words of sentences and synonyms of synset,
+        (3)     remain only similar words: similarity( lemma of sentence, synonym of synset) > eps
+        (4) select the most similar synset to sentence lemmas (where "dist" is Cosine similarity)
     
     Parameters
     ----------
@@ -167,12 +165,12 @@ def selectSynsetForSentenceByAverageSimilarityModified( sent, sentences, lemma_s
         return positive_answer, negative_answer
 
     max_sim = 0
-    best_synset = ''
-    for synset_id in lemma_synset:
-        S_k = set()     # some words of sentence
-        Cand_k = set()  # some synonyms of synset
-        for sent_lemma in sentences[sent]['lemmas']:    # all words from sentence
-            for syns_lemma in lemma_synset[synset_id]:  # all synonyms from synset
+    best_synset = '' # id of synset which is most similar to sentence
+    for synset_id in lemma_synsets:
+        S_k = set()     # words of sentence which are similar to some synonyms
+        Cand_k = set()  # synonyms of synset which are similar to some words of sentence
+        for sent_lemma in sentences[sent]['lemmas']:    # for each word from sentence
+            for syns_lemma in lemma_synsets[synset_id]:  # for each synonym from synset
                 d = model.n_similarity([sent_lemma], [syns_lemma])
                 if d > eps:
                     S_k.add(sent_lemma)
@@ -191,5 +189,5 @@ def selectSynsetForSentenceByAverageSimilarityModified( sent, sentences, lemma_s
             sentences[sent]['alg3_right'] = 0
         negative_answer = 1
 
-    return positive_answer, negative_answer
+    return positive_answer, negative_answer # return 0, 1 or 1, 0
 
